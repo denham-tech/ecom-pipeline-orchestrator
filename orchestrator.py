@@ -28,13 +28,22 @@ class PipelineOrchestrator:
         self.sentinel_dir = self.root / "catalog-validation-sentinel"
         self.delta_dir = self.root / "ecommerce-delta-engine"
         self.alerts_dir = self.root / "ecom-telemetry-alerts"
+        self.local_dir = Path(__file__).resolve().parent
+
+        # Ensure all required data directories exist across modules
+        for d in [self.engine_dir, self.sentinel_dir, self.delta_dir, self.alerts_dir, self.local_dir]:
+            (d / "data").mkdir(parents=True, exist_ok=True)
 
     def run_command(self, cmd: list, cwd: Path) -> subprocess.CompletedProcess:
-        """Executes a subprocess and verifies non-zero exit codes."""
+        """Executes a subprocess and logs all diagnostic output on failure."""
         logger.info("Running: %s (in %s)", " ".join(cmd), cwd.name)
         result = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
         if result.returncode != 0:
-            logger.error("Command failed [%d]: %s", result.returncode, result.stderr.strip())
+            logger.error("Command failed [exit %d]", result.returncode)
+            if result.stdout:
+                logger.error("STDOUT:\n%s", result.stdout.strip())
+            if result.stderr:
+                logger.error("STDERR:\n%s", result.stderr.strip())
         return result
 
     def execute_pipeline(
@@ -61,7 +70,7 @@ class PipelineOrchestrator:
         ]
         res = self.run_command(scrape_cmd, self.engine_dir)
         if res.returncode != 0 or not snapshot_file.exists():
-            logger.error("Pipeline aborted: Extraction failed.")
+            logger.error("Pipeline aborted: Extraction failed or snapshot missing.")
             return status
         status["scrape"] = True
 
@@ -79,7 +88,7 @@ class PipelineOrchestrator:
 
         # 3. Delta Computation (compares baseline against new snapshot)
         baseline_file = self.delta_dir / "data" / "snapshot_day1.csv"
-        delta_output = Path(__file__).resolve().parent / "data" / "live_deltas.csv"
+        delta_output = self.local_dir / "data" / "live_deltas.csv"
         delta_cmd = [
             sys.executable,
             "delta_engine.py",
