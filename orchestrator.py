@@ -23,12 +23,13 @@ class PipelineOrchestrator:
     """Controls execution flow and schema gatekeeping across pipeline modules."""
 
     def __init__(self, workspace_root: Optional[Path] = None):
-        self.root = workspace_root or Path(__file__).resolve().parent.parent
+        self.local_dir = Path(__file__).resolve().parent
+        self.root = workspace_root or self.local_dir.parent
+
         self.engine_dir = self.root / "shopify-catalog-engine"
         self.sentinel_dir = self.root / "catalog-validation-sentinel"
         self.delta_dir = self.root / "ecommerce-delta-engine"
         self.alerts_dir = self.root / "ecom-telemetry-alerts"
-        self.local_dir = Path(__file__).resolve().parent
 
         # Ensure all required data directories exist across modules
         for d in [self.engine_dir, self.sentinel_dir, self.delta_dir, self.alerts_dir, self.local_dir]:
@@ -86,8 +87,13 @@ class PipelineOrchestrator:
             return status
         status["validate"] = True
 
-        # 3. Delta Computation (compares baseline against new snapshot)
+        # 3. Delta Computation
         baseline_file = self.delta_dir / "data" / "snapshot_day1.csv"
+        # If no baseline file exists yet in a fresh clone, use current snapshot as baseline
+        if not baseline_file.exists():
+            import shutil
+            shutil.copy(snapshot_file, baseline_file)
+
         delta_output = self.local_dir / "data" / "live_deltas.csv"
         delta_cmd = [
             sys.executable,

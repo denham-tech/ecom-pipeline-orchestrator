@@ -13,11 +13,10 @@ jobs:
     steps:
       - name: Checkout Orchestrator Repository
         uses: actions/checkout@v4
-        with:
-          path: ecom-pipeline-orchestrator
 
       - name: Clone Sibling Pipeline Micro-Modules
         run: |
+          cd ..
           git clone https://github.com/denham-tech/shopify-catalog-engine.git
           git clone https://github.com/denham-tech/catalog-validation-sentinel.git
           git clone https://github.com/denham-tech/ecommerce-delta-engine.git
@@ -33,22 +32,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas pytest requests
 
-      - name: Prepare Module Directories & Baselines
-        run: |
-          mkdir -p shopify-catalog-engine/data
-          mkdir -p catalog-validation-sentinel/data
-          mkdir -p ecommerce-delta-engine/data
-          mkdir -p ecom-telemetry-alerts/data
-          mkdir -p ecom-pipeline-orchestrator/data
-
       - name: Run Orchestrator Unit Tests
         run: |
-          cd ecom-pipeline-orchestrator
           pytest -v
 
       - name: Execute Full Lifecycle Pipeline
         env:
           WEBHOOK_URL: ${{ secrets.TELEMETRY_WEBHOOK_URL }}
         run: |
-          cd ecom-pipeline-orchestrator
           python orchestrator.py --domain gymshark
