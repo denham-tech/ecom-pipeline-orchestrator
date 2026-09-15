@@ -1,0 +1,51 @@
+name: Scheduled E-Commerce Pipeline Orchestration
+
+on:
+  schedule:
+    # Triggers daily at 00:00 UTC
+    - cron: '0 0 * * *'
+  # Allows manual triggers directly from the GitHub UI for testing
+  workflow_dispatch:
+
+jobs:
+  execute-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Orchestrator Repository
+        uses: actions/checkout@v4
+        with:
+          path: ecom-pipeline-orchestrator
+
+      - name: Clone Sibling Pipeline Micro-Modules
+        run: |
+          git clone https://github.com/denham-tech/shopify-catalog-engine.git
+          git clone https://github.com/denham-tech/catalog-validation-sentinel.git
+          git clone https://github.com/denham-tech/ecommerce-delta-engine.git
+          git clone https://github.com/denham-tech/ecom-telemetry-alerts.git
+
+      - name: Set Up Python 3.12 Runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies Across Ecosystem
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ecom-pipeline-orchestrator/requirements.txt
+          pip install -r shopify-catalog-engine/requirements.txt
+          pip install -r catalog-validation-sentinel/requirements.txt
+          pip install -r ecommerce-delta-engine/requirements.txt
+          pip install -r ecom-telemetry-alerts/requirements.txt
+
+      - name: Run Orchestrator Unit Tests
+        run: |
+          cd ecom-pipeline-orchestrator
+          pytest -v
+
+      - name: Execute Full Lifecycle Pipeline
+        env:
+          WEBHOOK_URL: ${{ secrets.TELEMETRY_WEBHOOK_URL }}
+        run: |
+          cd ecom-pipeline-orchestrator
+          python orchestrator.py --domain gymshark
