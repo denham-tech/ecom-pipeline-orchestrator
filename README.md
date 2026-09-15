@@ -1,5 +1,6 @@
 Markdown
 # Autonomous E-Commerce Pipeline Orchestrator
+![Scheduled E-Commerce Pipeline](https://github.com/denham-tech/ecom-pipeline-orchestrator/actions/workflows/pipeline_cron.yml/badge.svg)
 
 Production-grade coordinator engine designed to monitor large-scale e-commerce catalogs, validate schema integrity, calculate snapshot differentials, and dispatch low-latency telemetry alerts.
 
