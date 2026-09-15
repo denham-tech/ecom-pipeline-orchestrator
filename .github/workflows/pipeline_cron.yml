@@ -4,7 +4,6 @@ on:
   schedule:
     # Triggers daily at 00:00 UTC
     - cron: '0 0 * * *'
-  # Allows manual triggers directly from the GitHub UI for testing
   workflow_dispatch:
 
 jobs:
@@ -29,14 +28,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Dependencies Across Ecosystem
+      - name: Install Ecosystem Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r ecom-pipeline-orchestrator/requirements.txt
-          pip install -r shopify-catalog-engine/requirements.txt
-          pip install -r catalog-validation-sentinel/requirements.txt
-          pip install -r ecommerce-delta-engine/requirements.txt
-          pip install -r ecom-telemetry-alerts/requirements.txt
+          pip install pandas pytest requests
 
       - name: Run Orchestrator Unit Tests
         run: |
